@@ -2,11 +2,16 @@ import os
 import streamlit as st
 
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.chains import RetrievalQA
-
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
-from langchain_huggingface import HuggingFaceEndpoint
+from langchain_groq import ChatGroq
+from langchain import hub
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+
+
+from dotenv import load_dotenv
+load_dotenv()
 
 # Load Database
 DB_FAISS_PATH="vectorstore/db_faiss"
@@ -21,16 +26,6 @@ def get_vectorstore():
 def set_custom_prompt(custom_prompt_template):
     prompt=PromptTemplate(template=custom_prompt_template, input_variables=["context", "question"])
     return prompt
-
-# Step 1: Setup LLM (Mistral with HuggingFace)
-def load_llm(huggingface_repo_id, HF_TOKEN):
-    llm=HuggingFaceEndpoint(
-        repo_id=huggingface_repo_id,
-        temperature=0.5,
-        model_kwargs={"token":HF_TOKEN,
-                      "max_length":"512"}
-    )
-    return llm
 
 
 def main():
@@ -47,6 +42,22 @@ def main():
     if prompt:
         st.chat_message('user').markdown(prompt)
         st.session_state.messages.append({'role':'user', 'content':prompt})
+
+        try:
+            vectorstore=get_vectorstore()
+            if vectorstore is None:
+                st.error("Failed to load the vector store")
+
+            # Step 1: Setup LLM (Mistral with HuggingFace)
+            GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+            GROQ_MODEL_NAME = "llama-3.1-8b-instant"
+            llm = ChatGroq(
+                model = GROQ_MODEL_NAME,
+                temperature = 0.5,
+                max_tokens = 512,
+                api_key = GROQ_API_KEY,
+            )
+
 
 
 
