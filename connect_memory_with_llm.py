@@ -1,6 +1,6 @@
 import os
 
-from langchain_groq import Chatgroq
+from langchain_groq import ChatGroq
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -17,7 +17,7 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 GROQ_MODEL_NAME = "llama-3.1-8b-instant"
 
 
-llm = Chatgroq(
+llm = ChatGroq(
     model = GROQ_MODEL_NAME,
     temperature = 0.5,
     max_tokens = 512,
@@ -37,7 +37,7 @@ retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
 combine_docs_chain = create_stuff_documents_chain(llm, retrieval_qa_chat_prompt)
 
 # Retrieval chain (retriever + doc combiner)
-rag_chain = create_retrieval_chain(db.as_retrieval(search_kwargs={'k':3}), combine_docs_chain)
+rag_chain = create_retrieval_chain(db.as_retriever(search_kwargs={'k':3}), combine_docs_chain)
 
 
 # Now invoke with a single query
