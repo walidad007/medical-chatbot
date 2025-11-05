@@ -71,7 +71,7 @@ def main():
 
             result = response["answer"]
             st.chat_message('assistant').markdown(result)
-            st.session_stat.message.append({'role':'assistant', 'content': result})
+            st.session_state.messages.append({'role':'assistant', 'content': result})
 
         except Exception as e:
             st.error(f"Error: {str(e)}")
