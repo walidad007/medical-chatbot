@@ -48,7 +48,7 @@ def main():
             if vectorstore is None:
                 st.error("Failed to load the vector store")
 
-            # Step 1: Setup LLM (Mistral with HuggingFace)
+            # Step 1: Setup LLM (llama instant with Groq)
             GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
             GROQ_MODEL_NAME = "llama-3.1-8b-instant"
             llm = ChatGroq(
@@ -57,51 +57,24 @@ def main():
                 max_tokens = 512,
                 api_key = GROQ_API_KEY,
             )
+            
+            # Build RAG Chain
+            retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
 
+            # Document combiner chain (stuff documents into prompt)
+            combine_docs_chain = create_stuff_documents_chain(llm, retrieval_qa_chat_prompt)
 
+            # Retrieval chain (retriever + doc combiner)
+            rag_chain = create_retrieval_chain(vectorstore.as_retriever(search_kwargs={'k':3}), combine_docs_chain)
 
+            response = rag_chain.invoke({'input': prompt})
 
-        CUSTOM_PROMPT_TEMPLATE = """
-                Use the pieces of information provided in the context to answer user's question.
-                If you dont know the answer, just say that you dont know, dont try to make up an answer. 
-                Dont provide anything out of the given context
-
-                Context: {context}
-                Question: {question}
-
-                Start the answer directly. No small talk please.
-                """
-        
-        HUGGINGFACE_REPO_ID="mistralai/Mistral-7B-Instruct-v0.3"
-        HF_TOKEN=os.environ.get("HF_TOKEN")
-        
-
-        try:
-            vectorstore=get_vectorstore()
-            if vectorstore is None:
-                st.error("Failed to load the vector store")
-
-            # Create QA chain
-            qa_chain=RetrievalQA.from_chain_type(
-                llm=load_llm(huggingface_repo_id=HUGGINGFACE_REPO_ID, HF_TOKEN=HF_TOKEN),
-                chain_type="stuff",
-                retriever=vectorstore.as_retriever(search_kwargs={'k':3}),
-                return_source_documents=True,
-                chain_type_kwargs={'prompt':set_custom_prompt(CUSTOM_PROMPT_TEMPLATE)}
-            )
-
-
-            response=qa_chain.invoke({'query': prompt})
-
-            result = response["result"]
-            source_documents= response["source_documents"]
-            result_to_show = result+"\n Source Docs: \n"+str(source_documents)
-            # response="Hi, I am Medibot!"
-            st.chat_message('assistant').markdown(result_to_show)
-            st.session_state.messages.append({'role':'assistant', 'content':result_to_show})
+            result = response["answer"]
+            st.chat_message('assistant').markdown(result)
+            st.session_stat.message.append({'role':'assistant', 'content': result})
 
         except Exception as e:
             st.error(f"Error: {str(e)}")
 
-if __name__=="__main__":
-    main()
+if __name__ == "__main__":
+        main()
